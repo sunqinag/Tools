@@ -8,7 +8,6 @@
 #   完成日期：2019-12-19
 
 import numpy as np
-import cv2
 import functools
 import os
 import shutil
@@ -17,7 +16,6 @@ import filecmp
 import random
 from . import python_base_data_augmentation
 from ...file_operator import bz_path
-# from ...data_preprocessing import data_preprocessing
 from ..python_image_processing import imread,imwrite
 from diabetic_package.log.log import bz_log
 
@@ -36,9 +34,8 @@ def load_detection_txt_label(detection_txt_label_path):
     label = []
     file = open(detection_txt_label_path, 'r+')
     for line in file.readlines():
-        line = line[:-1].split('_')
-        line = list(map(lambda x: float(x), line))
-        label.append(line)
+        line=list(map(float, line.strip().split(',')))
+        label.append([line[1], line[0], line[3], line[2], line[4]]) #坐标顺序改变
     label = np.array(label)
     return label
 
@@ -99,23 +96,26 @@ class DataAugmentation:
 
         self.__check_params()
         self.color_flag = 'RGB'
-        # 去掉
         self.is_enhance_image_only = False
         if self.channel == 1:
             self.color_flag = 'Gray'
         self.__init_augmentation_data_fn()
 
     def augment_data(self):
-        # crx更改逻辑，只进行一次数据增强
-        if self.is_repeat_data:
-            return self._repeat_use_data()
-        else:
-            self.__create_augmentation_data_dir()
-            # if self.augmentation_ratio == 1:
-            #     return self._one_ratio_augmentation()
-            # else:
-            #     return self._multiply_ratio_augmentation()
-            return self.augmentation()
+        self.__create_augmentation_data_dir()
+        return self.augmentation()
+
+    # def augment_data(self):
+    #     # crx更改逻辑，只进行一次数据增强
+    #     if self.is_repeat_data:
+    #         return self._repeat_use_data()
+    #     else:
+    #         self.__create_augmentation_data_dir()
+    #         # if self.augmentation_ratio == 1:
+    #         #     return self._one_ratio_augmentation()
+    #         # else:
+    #         #     return self._multiply_ratio_augmentation()
+    #         return self.augmentation()
 
     def augmentation(self):
         # crx只做一次增强
@@ -377,7 +377,7 @@ class DataAugmentation:
         if is_adding_noise:
             img = self.__random_add_noise_to_img(img)
         label=imread(label_path,'Gray')
-        rdstr = ''.join(random.sample(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], 3))
+        rdstr = ''.join(random.sample(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 5))
         augmentation_img, augmentation_label = augment_fn(img, label)
         timesamp = self.__get_timestamp()
         augmentation_img_path = self.augmentation_img_dir + os.sep + img_name + rdstr + timesamp + '.' + file_extension_list[0]
@@ -386,35 +386,6 @@ class DataAugmentation:
         imwrite(augmentation_label_path, augmentation_label)
         return augmentation_img_path, augmentation_label_path
 
-
-
-    # def __create_segmentation_data(self,
-    #                                img_path,
-    #                                label_path,
-    #                                augment_fn,
-    #                                img_name,
-    #                                file_extension_list,
-    #                                is_adding_noise=False):
-    #     """
-    #     :param img_path: 分割单张图像的路径
-    #     :param label_path: 分割单张label的路径
-    #     :param augment_fn: 增强函数
-    #     :param img_name: 增强后图像的名字
-    #     :param file_extension_list:图像和label的后缀
-    #     :param is_adding_noise: 是否给图像加噪声
-    #     :return:分割增强的图像和标签
-    #     """
-    #     img=imread(img_path,self.color_flag)
-    #     if is_adding_noise:
-    #         img = self.__random_add_noise_to_img(img)
-    #     label=imread(label_path,'Gray')
-    #     augmentation_img, augmentation_label = augment_fn(img, label)
-    #
-    #     augmentation_img_path = self.augmentation_img_dir + os.sep + img_name + '.' + file_extension_list[0]
-    #     imwrite(augmentation_img_path,augmentation_img)
-    #     augmentation_label_path = self.augmentation_label_dir + os.sep + img_name + '.' + file_extension_list[1]
-    #     imwrite(augmentation_label_path, augmentation_label)
-    #     return augmentation_img_path, augmentation_label_path
     def __create_classification_data(self,
                                      img_path,
                                      label_path,
@@ -443,7 +414,7 @@ class DataAugmentation:
         label = int(label)
         timesamp = self.__get_timestamp()
 
-        rdstr = ''.join(random.sample(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], 3))
+        rdstr = ''.join(random.sample(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 5))
 
         augmentation_img, augmentation_label = augment_fn(img, label)
         augmentation_img_path = self.augmentation_img_dir + os.sep + \
@@ -480,8 +451,11 @@ class DataAugmentation:
             label = load_detection_txt_label(label_path)
         else:
             label = np.load(label_path)
+            #update by enfu.
+            # label = load_detection_txt_label(label_path)
+
         timesamp = self.__get_timestamp()
-        rdstr = ''.join(random.sample(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], 3))
+        rdstr = ''.join(random.sample(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l','m',"n","o","p"], 5))
         augmentation_img, augmentation_label = augment_fn(img, label)
         augmentation_img_path = self.augmentation_img_dir + os.sep + \
             img_name + rdstr + timesamp + '.' + file_extension_list[0]
@@ -549,27 +523,3 @@ class DataAugmentation:
         augmentation_information_file.write('img_list=' + str(self.img_list) + '\n')
         augmentation_information_file.write('label_list=' + str(self.label_list) + '\n')
         augmentation_information_file.close()
-
-
-# if __name__ == '__main__':
-#     from diabetic_package.file_operator import bz_path
-#     import matplotlib.pyplot as plt
-#
-#     # 分割路径
-#     img_dir = '/home/bz/PycharmProjects/phone/indus_data_base/1/imgs'
-#     label_dir = '/home/bz/PycharmProjects/phone/indus_data_base/1/labels'
-#     img_list = np.sort(bz_path.get_file_path(img_dir, ret_full_path=True))
-#     label_list = np.sort(bz_path.get_file_path(label_dir, ret_full_path=True))
-#     generate_data_folder='/home/wx/git_code/20191029/out/'
-#     # # 分类路径
-#     # img_dir = '/home/wx/data/PycharmProjects/segmentation_detection/Untitled Folder/pic'
-#     # img_list = np.sort(bz_path.get_file_path(img_dir, ret_full_path=True))
-#     # label_list = np.ones(shape=len(img_list), dtype=int)
-#
-#     augmentation_data = DataAugmentation(img_list=img_list,
-#                                          label_list=label_list,
-#                                          channel=3,
-#                                          augmentation_ratio=3,
-#                                          generate_data_folder=generate_data_folder,
-#                                          task = 'segmentation')
-#     augmentation_img_list, augmentation_label_list = augmentation_data.augment_data()

@@ -12,20 +12,27 @@ class Dataset:
         self.num_epoch = num_epoch
 
     def get_next(self):
-        # image_list = os.listdir(self.image_dir)
-        # image_list = [self.image_dir+'/'+image_path for image_path in image_list]
-        image_list = bz_path.get_file_path(self.image_dir, exts=['.jpg'], ret_full_path=True)
-        choice_ind = np.random.choice(
-            np.arange(len(image_list)),
-            len(image_list),
-            replace=False)
-        image_list = np.array(image_list)
-        image_list = image_list[choice_ind]
-        train_num = int(len(image_list) * 0.8)
-        train_data_list = image_list[:train_num]
-        val_data_list = image_list[train_num:]
+
+        #dropped by enfu
+        # image_list = bz_path.get_file_path(self.image_dir, exts=['.jpg'], ret_full_path=True)
+        # choice_ind = np.random.choice(
+        #     np.arange(len(image_list)),
+        #     len(image_list),
+        #     replace=False)
+        # image_list = np.array(image_list)
+        # image_list = image_list[choice_ind]
+        # train_num = int(len(image_list) * 0.8)
+        # train_data_list = image_list[:train_num]
+        # val_data_list = image_list[train_num:]
+        # train_dataset = self.creat_dataset(train_data_list)
+        # val_dataset = self.creat_dataset(val_data_list)
+
+        #revised by enfu
+        train_data_list=bz_path.get_file_path(self.image_dir+'/train',exts=['.jpg'], ret_full_path=True)
+        val_data_list = bz_path.get_file_path(self.image_dir+'/val',exts=['.jpg'], ret_full_path=True)
         train_dataset = self.creat_dataset(train_data_list)
         val_dataset = self.creat_dataset(val_data_list)
+
         return train_dataset, val_dataset
 
     def creat_dataset(self,data_list):
@@ -43,14 +50,14 @@ class Dataset:
 
     def pyfunc(self,image,size):
         # image = cv2.imread(image.decode('ascii'),0)
-        # print(str(image,encoding='utf-8'))
-        image= cv2.imread(str(image,encoding='utf-8'),0)
-        # print('image shape:',image.shape)
+        image = cv2.imdecode(np.fromfile(image,dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
         image = cv2.resize(image, tuple(size))
-        if random.randint(0,1) > 0.5:
-            image = python_base_data_augmentation.random_rotate_image_and_label(image,min_angle=-20,max_angle=20)
+        # if random.randint(0,1) > 0.5:
+        #     image = python_base_data_augmentation.random_rotate_image_and_label(image,min_angle=-20,max_angle=20)
+        # if random.randint(0, 1) > 0.5:
+        #     image = python_base_data_augmentation.random_translation_image_and_label(image,max_dist=0.3)
         if random.randint(0, 1) > 0.5:
-            image = python_base_data_augmentation.random_translation_image_and_label(image,max_dist=0.3)
+            image = np.uint8(python_base_data_augmentation.add_noise(image, ['gaussian'], 0.0001, 0.0001)[0] * 255)
         return image
 
     def read_image(self,image):

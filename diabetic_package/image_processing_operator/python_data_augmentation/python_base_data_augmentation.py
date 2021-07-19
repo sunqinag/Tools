@@ -53,8 +53,8 @@ def rotate_image_and_label(image, label=None, rotate_angle=30, center=None):
                      '目标检测任务label的shape要是一个N*5的ndarray对象')
 
 
-def random_rotate_image_and_label(image, label=None, center=None, min_angle=0,
-                                  max_angle=360):
+def random_rotate_image_and_label(image, label=None, center=None, min_angle=-30,
+                                  max_angle=30):
     """
     对image和label进行随机旋转
     :param image:输入的图像
@@ -124,6 +124,50 @@ def random_shear_image_and_label(image, label=None, min_scale=-0.5, max_scale=0.
     scale2 = np.random.uniform(min_scale, max_scale)
     return shear_image_and_label(image=image, label=label, scale1=scale1, scale2=scale2)
 
+# def resize_image_and_label(image, label=None, width_and_height=(500, 500), interpolation=cv2.INTER_LINEAR):  #resize可以通过计算尺度使用scale来算
+#     """
+#     对image和label进行缩放变形
+#     :param image:输入的图像
+#     :param label:输入的标签
+#     :param width_and_height:resize的宽高,输入一个包含两个元素的tuple
+#     :param interpolation:图像插值方式
+#     :return:缩放后的图像(标签)
+#     """
+#     height, width = image.shape[:2]
+#     scale_x = width_and_height[0] / width
+#     scale_y = width_and_height[1] / height
+#
+#     resized_img = cv2.resize(
+#         image, width_and_height, interpolation=interpolation)
+#     if label is None:
+#         return resized_img
+#     elif isinstance(label, int) or isinstance(label, float):
+#         return resized_img, label
+#     elif len(label.shape) == 2 and label.shape == image.shape[:2]:
+#         label = cv2.resize(
+#             label, width_and_height,
+#             interpolation=cv2.INTER_NEAREST)
+#         return resized_img, label
+#     elif len(label.shape) == 2 and label.shape[1] == 5:
+#         label = label.astype(np.float64)
+#         label[:, :4] *= [scale_x, scale_y, scale_x, scale_y]
+#         return resized_img, label
+#     raise ValueError('分割任务label的高宽要与image的高宽一致！'
+#                      '目标检测任务label的shape要是一个N*5的ndarray对象')
+
+def resize_image_and_label(image, label=None, width_and_height=(500, 500), interpolation=cv2.INTER_LINEAR):  #resize可以通过计算尺度使用scale来算
+    """
+    对image和label进行缩放变形
+    :param image:输入的图像
+    :param label:输入的标签
+    :param width_and_height:resize的宽高,输入一个包含两个元素的tuple
+    :param interpolation:图像插值方式
+    :return:缩放后的图像(标签)
+    """
+    height, width = image.shape[:2]
+    scale_x = width_and_height[0] / width
+    scale_y = width_and_height[1] / height
+    return scale_image_and_label(image,label,scale_x,scale_y,interpolation=interpolation)
 
 def scale_image_and_label(image, label=None, scale_x=0.5, scale_y=0.5, interpolation=cv2.INTER_LINEAR):
     """
@@ -151,38 +195,6 @@ def scale_image_and_label(image, label=None, scale_x=0.5, scale_y=0.5, interpola
         label = label.astype(np.float64)
         label[:, :4] *= [scale_x, scale_y, scale_x, scale_y]
         return scaled_img, label
-    raise ValueError('分割任务label的高宽要与image的高宽一致！'
-                     '目标检测任务label的shape要是一个N*5的ndarray对象')
-
-
-def resize_image_and_label(image, label=None, width_and_height=(500, 500), interpolation=cv2.INTER_LINEAR):
-    """
-    对image和label进行缩放变形
-    :param image:输入的图像
-    :param label:输入的标签
-    :param width_and_height:resize的宽高,输入一个包含两个元素的tuple
-    :param interpolation:图像插值方式
-    :return:缩放后的图像(标签)
-    """
-    height, width = image.shape[:2]
-    scale_x = width_and_height[0] / width
-    scale_y = width_and_height[1] / height
-
-    resized_img = cv2.resize(
-        image, width_and_height, interpolation=interpolation)
-    if label is None:
-        return resized_img
-    elif isinstance(label, int) or isinstance(label, float):
-        return resized_img, label
-    elif len(label.shape) == 2 and label.shape == image.shape[:2]:
-        label = cv2.resize(
-            label, width_and_height,
-            interpolation=cv2.INTER_NEAREST)
-        return resized_img, label
-    elif len(label.shape) == 2 and label.shape[1] == 5:
-        label = label.astype(np.float64)
-        label[:, :4] *= [scale_x, scale_y, scale_x, scale_y]
-        return resized_img, label
     raise ValueError('分割任务label的高宽要与image的高宽一致！'
                      '目标检测任务label的shape要是一个N*5的ndarray对象')
 
@@ -514,3 +526,52 @@ def __clip_box(bbox, clip_box):
     bbox[:, 2][bbox[:, 2] < clip_box[0]] = clip_box[0]
     bbox[:, 3][bbox[:, 3] < clip_box[1]] = clip_box[1]
     return bbox
+
+if __name__ == '__main__':
+    # cls
+    image = '/home/xtcsun/PycharmProjects/package_update/bk/cls/class_split/train/0/img/img7_flip_029130_flip_072904_flip_458511.jpg'
+    image = cv2.imread(image)
+    label = 1
+    #单纯图片
+    # resize_image = resize_image_and_label(image, None, (227, 227))
+    #分类
+    # resize_image,resize_label = resize_image_and_label(image,label,(227,227))
+
+    #分割
+    image_seg = '/home/xtcsun/PycharmProjects/package_update/bk/seg/split_seg/val/0/img/PHYQT18BD76M1_4_MIC_4_W2_20181201235726_scale_crop_802022_flip_819556.jpg'
+    label_seg = '/home/xtcsun/PycharmProjects/package_update/bk/seg/split_seg/val/0/label/PHYQT18BD76M1_4_MIC_4_W2_20181201235726_scale_crop_802022_flip_819556.png'
+    image_seg = cv2.imread(image_seg)
+    label_seg = cv2.imread(label_seg,0)*255
+    resize_image, resize_label = resize_image_and_label(image_seg, label_seg, (227, 227))
+
+    def show_seg(image,label):
+        cv2.imshow('image',image)
+        cv2.imshow('label',label)
+        cv2.waitKey(0)
+    show_seg(image_seg,label_seg)
+    show_seg(resize_image, resize_label)
+
+
+    # #目标检测
+    # image_det = '/home/xtcsun/PycharmProjects/package_update/bk/det/detection_split/train/0/img/000017.jpg'
+    # image_det = cv2.imread(image_det)
+    # label_det = [[62,185,199,279,0],[78,90,336,403,5]]
+    # label_det = np.array(label_det)
+    # resize_image, resize_label = resize_image_and_label(image_det, label_det, (227, 227))
+    # print(resize_image.shape)
+    # print(resize_label.shape)
+    #
+    #
+    # def show_detect(resize_image,resize_label):
+    #     for i in range(len(resize_label)):
+    #         p1 = (int(resize_label[i][0]), int(resize_label[i][1]))
+    #         p2 = (int(resize_label[i][2]), int(resize_label[i][3]))
+    #         print(p1,p2)
+    #         cv2.rectangle(resize_image, p1, p2, (255, 0, 0))
+    #         p3 = (max(p1[0], 15), max(p1[1], 15))
+    #         title = "%s:%d" % ('label::', resize_label[i][-1])
+    #         cv2.putText(resize_image, title, p3, cv2.FONT_ITALIC, 0.6, (0, 255, 0), 1)
+    #     cv2.imshow("view", resize_image)
+    #     cv2.waitKey(0)
+    # show_detect(image_det,label_det)
+    # show_detect(resize_image, resize_label)

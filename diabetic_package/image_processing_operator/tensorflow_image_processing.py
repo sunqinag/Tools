@@ -210,7 +210,7 @@ def transpose_image_and_label_tf(image, label):
     image_type = image.dtype
     label_type = label.dtype
     image_transpose = tf.image.transpose_image(image)
-    image_transpose = tf.image.resize_bilinear(image_transpose, size=[image_shape[1], image_shape[2]])
+    image_transpose = tf.image.resize_nearest_neighbor(image_transpose, size=[image_shape[1], image_shape[2]])
     if label is None:
         return image_transpose
     label_shape = tf.shape(label)
@@ -254,7 +254,7 @@ def random_rescale_image_and_label_tf(image, label, min_scale=0.5, max_scale=1):
     new_height = tf.to_int32(height * height_scale)
     new_width = tf.to_int32(width * width_scale)
     image = tf.image.resize_images(
-        image, [new_height, new_width], method=tf.image.ResizeMethod.BILINEAR)
+        image, [new_height, new_width], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     image = tf.cast(image, image_type)
     if label is None:
         return image
@@ -339,7 +339,7 @@ def random_rotate_image_and_label_tf_pyfunc(image, label, max_angle):
         if label is None:
             return misc.imrotate(img, angle, 'bilinear'), None
         else:
-            return misc.imrotate(img, angle, 'bilinear'), misc.imrotate(label, angle, 'nearest')
+            return misc.imrotate(img, angle, 'nearest'), misc.imrotate(label, angle, 'nearest')
 
     if len(image.shape) != 4 or (label is not None and len(label.shape) != 4):
         bz_log.error('传入的image必须是四维的tensor,label必须是四维的tensor或者None!')
@@ -368,7 +368,7 @@ def rotate_image_and_label_tf_pyfunc(image, label, angle):
         if label is None:
             return misc.imrotate(img, angle, 'bilinear'), None
         else:
-            return misc.imrotate(img, angle, 'bilinear'), misc.imrotate(label, angle, 'nearest')
+            return misc.imrotate(img, angle, 'nearest'), misc.imrotate(label, angle, 'nearest')
 
     if len(image.shape) != 4 or (label is not None and len(label.shape) != 4):
         bz_log.error('传入的image必须是四维的tensor,label必须是四维的tensor或者None!')

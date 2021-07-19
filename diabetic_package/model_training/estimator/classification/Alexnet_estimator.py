@@ -35,7 +35,8 @@ class AlexnetEstimator(base_classify_estimator.BaseClassifyEstimator):
                  label_weight=1.0,
                  optimizer_fn=tf.train.AdamOptimizer,
                  learning_rate=1e-3,
-                 tensors_to_log={'probabilities': 'softmax:0'},
+                 # tensors_to_log={'probabilities': 'softmax:0'},
+                 tensors_to_log={},
                  **kwargs
                  ):
         """

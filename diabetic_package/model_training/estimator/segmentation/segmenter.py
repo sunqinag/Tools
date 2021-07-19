@@ -26,7 +26,6 @@ class Segmenter():
                  estimator_obj,
                  height_and_width,
                  class_num,
-                 crop_height_and_width=(400, 400),
                  channels_list=(1, 1),
                  file_extension_list=('bmp', 'png'),
                  accuracy_weight=(1.0, 1.0),
@@ -42,7 +41,6 @@ class Segmenter():
         :param model_dir: 模型路径
         :param estimator_obj: estimator对象
         :param height_and_width: 图像高度和宽度
-        :param crop_height_and_width: 图像crop高度和宽度
         :param channels_list: 图像通道list
         :param file_extension_list: 图像类型list
         :param class_num: 分类个数
@@ -54,8 +52,6 @@ class Segmenter():
         """
         self.img_height = height_and_width[0]
         self.img_width = height_and_width[1]
-        self.img_crop_height = crop_height_and_width[0]
-        self.img_crop_width = crop_height_and_width[1]
         self.channel_list = channels_list
         self.file_extension_list = file_extension_list
         self.model_dir = model_dir
@@ -189,7 +185,6 @@ class Segmenter():
                         export_model_dir=self.export_model_dir,
                         eval_result=eval_result)
 
-
                  # early stopping
                 if (self.is_early_stop and epoch_index > change_loss_epoch):
                     loss_tolerance = 0.0005
@@ -198,8 +193,8 @@ class Segmenter():
                     else:
                         loss_not_decrease_epoch_num = 0
                     if loss_not_decrease_epoch_num >  5:
-                        bz_log.info("early stopping 共训练%d个epoch%d", epoch_index)
-                        bz_log.info("is early stop%s", self.is_early_stop)
+                        bz_log.info("early stopping 共训练%d个epoch", epoch_index)
+                        bz_log.info("is early stop %s", self.is_early_stop)
                         print("early stopping 共训练%d个epoch" %epoch_index)
                         break
 
@@ -251,8 +246,8 @@ class Segmenter():
                 self.export_model_dir + \
                 '/frozen_model/model_config.txt', 'w+') as f:
             f.write('model_name:frozen_model.pb' + '\n')
-            f.write('input_height:' + str(self.img_crop_height) + '\n')
-            f.write('input_width:' + str(self.img_crop_width) + '\n')
+            f.write('input_height:' + str(self.img_height) + '\n')
+            f.write('input_width:' + str(self.img_width) + '\n')
             f.write('input_channel:' + str(self.channel_list[0]) + '\n')
             f.write('batch_size:' + str(self.batch_size) + '\n')
             f.write('class_num:' + str(self.estimator_obj.class_num))
@@ -315,7 +310,6 @@ class Segmenter():
             channels_list=self.channel_list,
             file_extension_list=self.file_extension_list,
             height_width=(self.img_height, self.img_width),
-            crop_height_width=(self.img_crop_height, self.img_crop_width),
             batch_size=self.batch_size,
             num_epochs=self.eval_epoch_step,
             shuffle=True,
@@ -335,7 +329,6 @@ class Segmenter():
             channels_list=self.channel_list,
             file_extension_list=self.file_extension_list,
             height_width=(self.img_height, self.img_width),
-            crop_height_width=(self.img_crop_height, self.img_crop_width),
             batch_size=self.batch_size,
             num_epochs=1,
             mode='evaluate',
@@ -353,7 +346,6 @@ class Segmenter():
             channels_list=self.channel_list[0],
             file_extension_list=self.file_extension_list[0],
             height_width=(self.img_height, self.img_width),
-            crop_height_width=(self.img_crop_height, self.img_crop_width),
             mode='predict',
             task='segmentation')
         return predict_dataset.create_dataset()

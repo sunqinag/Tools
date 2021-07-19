@@ -15,7 +15,7 @@ from ..image_processing_operator import tensorflow_image_processing_map, tensorf
 
 
 class ImageLabelDataSetBaseClass:
-    def __init__(self, img_list, label_list, channels_list, file_extension_list, height_width, crop_height_width=(400, 400),
+    def __init__(self, img_list, label_list, channels_list, file_extension_list, height_width=(400, 400),
                  batch_size=1, num_epochs=1, shuffle=False, mode='train', task='classification'):
         """
         dataset基类
@@ -24,7 +24,7 @@ class ImageLabelDataSetBaseClass:
         :param channels_list: 解码图像的通道数如[3,1]
         :param file_extension_list: 解码图像的格式,目前支持bmp,jpg,jpeg,png,gif
         :param height_width: 进行resize后的高和宽
-        :param crop_height_width: 进行图像crop的高宽
+
         :param batch_size: batch的大小
         :param num_epochs: epoch数
         :param shuffle: 是否shuffle
@@ -35,7 +35,6 @@ class ImageLabelDataSetBaseClass:
 
         self.img_path_list, self.label_list = img_list, label_list
         self.height_width = height_width
-        self.crop_height_width = crop_height_width
 
         self.batch_size = batch_size
         self.num_epochs = num_epochs
@@ -77,7 +76,7 @@ class ImageLabelDataSetBaseClass:
         dataset_src = ({'img_list': self.img_path_list}, {'label_list': self.label_list})
         dataset = tf.data.Dataset.from_tensor_slices(dataset_src)
         dataset_map = dataset.map(self._read_img_label, num_parallel_calls=4)
-        dataset_map = dataset_map.map(self._preprocess_image_map_outer, num_parallel_calls=4)
+        # dataset_map = dataset_map.map(self._preprocess_image_map_outer, num_parallel_calls=4)
         if self.shuffle:
             dataset = dataset_map.batch(
                 self.batch_size, drop_remainder=False).shuffle(
@@ -115,11 +114,12 @@ class ImageLabelDataSetBaseClass:
         if self.mode == 'train':
             image_map, label_map = self.preprocess_image_map({'img': image_map, 'label': label_map})
 
+        print("height width", self.height_width)
         image_map_type=image_map.dtype
-        image_map = tf.image.resize_bilinear(image_map, size=[self.crop_height_width[0], self.crop_height_width[1]])
+        image_map = tf.image.resize_bilinear(image_map, size=[self.height_width[0], self.height_width[1]])
         image_map=tf.cast(image_map,image_map_type)
         image_map = tf.reshape(image_map,
-                               shape=[self.crop_height_width[0], self.crop_height_width[1], self.channels_list[0]])
+                               shape=[self.height_width[0], self.height_width[1], self.channels_list[0]])
 
 
         if self.mode == 'predict':
@@ -129,25 +129,44 @@ class ImageLabelDataSetBaseClass:
         else:
             label_map_type = label_map.dtype
             label_map = tf.image.resize_nearest_neighbor(label_map,
-                                                         size=[self.crop_height_width[0], self.crop_height_width[1]])
+                                                         size=[self.height_width[0], self.height_width[1]])
             label_map = tf.cast(label_map, label_map_type)
             label_map = tf.reshape(label_map,
-                                   shape=[self.crop_height_width[0], self.crop_height_width[1], self.channels_list[1]])
+                                   shape=[self.height_width[0], self.height_width[1], self.channels_list[1]])
             return {'img': image_map, 'label': label_map}
 
     def _read_img_label(self, img_path_list, labels):
         img_list = img_path_list['img_list']
+        print("height_width", self.height_width)
         img = tensorflow_image_processing.read_image_and_resize_tf(
             img_list, self.channels_list[0], self.file_extension_list[0],
-            height=self.height_width[0], width=self.height_width[1], method=tf.image.ResizeMethod.BILINEAR)
-        if self.task == 'segmentation' and (self.mode == 'train' or self.mode == 'evaluate'):
+            height=self.height_width[0], width=self.height_width[1],
+            method=tf.image.ResizeMethod.BILINEAR)
+        if self.task == 'segmentation' and (
+                self.mode == 'train' or self.mode == 'evaluate'):
             label_list = labels['label_list']
             label = tensorflow_image_processing.read_image_and_resize_tf(
                 label_list, self.channels_list[1], self.file_extension_list[1],
-                height=self.height_width[0], width=self.height_width[1], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                height=self.height_width[0], width=self.height_width[1],
+                method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             return {'img': img, 'label': label}
         else:
             return {'img': img, 'label': labels['label_list']}
+
+    # def _read_img_label(self, img_path_list, labels):
+    #     img_list = img_path_list['img_list']
+    #     print("height_width", self.height_width)
+    #     img = tensorflow_image_processing.read_image_and_resize_tf(
+    #         img_list, self.channels_list[0], self.file_extension_list[0],
+    #         height=self.height_width[0], width=self.height_width[1], method=tf.image.ResizeMethod.BILINEAR)
+    #     if self.task == 'segmentation' and (self.mode == 'train' or self.mode == 'evaluate'):
+    #         label_list = labels['label_list']
+    #         label = tensorflow_image_processing.read_image_and_resize_tf(
+    #             label_list, self.channels_list[1], self.file_extension_list[1],
+    #             height=self.height_width[0], width=self.height_width[1], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    #         return {'img': img, 'label': label}
+    #     else:
+    #         return {'img': img, 'label': labels['label_list']}
 
     def _check_params(self):
         mode_tuple = ('train', 'evaluate', 'predict')
@@ -184,8 +203,7 @@ class ImageLabelDataSetBaseClass:
         if self.task == 'segmentation' and (len(self.channels_list) != 2 or len(self.file_extension_list) != 2):
             raise ValueError("分割任务必须给定参数channels_list和参数img_format_list两个值!")
 
-        if len(self.height_width) != 2 or len(self.crop_height_width) != 2:
-            raise ValueError('height_width和crop_height_width必须包含两个值！')
+
 
 
 class ImageLabelDataSet(ImageLabelDataSetBaseClass):
@@ -205,10 +223,10 @@ class ImageLabelDataSet(ImageLabelDataSetBaseClass):
         # image, label = tensorflow_image_processing_map.random_translate_image_and_label_tf_map(image, label, max_dx=30,
         #                                                                                        max_dy=30, rate=0.1)
         # image, label = tensorflow_image_processing_map.random_rescale_and_crop_image_and_label_tf_map(
-        #     image, label, crop_width=self.crop_height_width[1], crop_height=self.crop_height_width[0], rate=0.5,
+        #     image, label, crop_width=self.height_width[1], crop_height=self.height_width[0], rate=0.5,
         #     min_scale=0.8, max_scale=1.2)
         image, label = tensorflow_image_processing_map.random_crop_or_pad_image_and_label_tf_map(
-            image, label, self.crop_height_width[0], self.crop_height_width[1], rate=0.5)
+            image, label, self.height_width[0], self.height_width[1], rate=0.5)
 
 
 

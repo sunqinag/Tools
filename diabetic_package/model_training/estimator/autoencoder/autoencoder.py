@@ -11,9 +11,9 @@ import tensorflow as tf
 import os, shutil
 import json
 import socket
-from diabetic_package.model_training.autoencoder.dataset import Dataset
-from diabetic_package.model_training.autoencoder import loss
-from diabetic_package.model_training.autoencoder import model
+from diabetic_package.model_training.estimator.autoencoder.dataset import Dataset
+from diabetic_package.model_training.estimator.autoencoder import loss
+from diabetic_package.model_training.estimator.autoencoder import model
 from tensorflow.python.tools.freeze_graph import graph_util
 
 from diabetic_package.file_operator import bz_path
@@ -29,7 +29,7 @@ class Autoencoder:
                  batch_size=5,
                  img_size=(512, 512),
                  channel= 1,
-                 model_type=model.Model_concat,
+                 model_type=model.Model_dense_CONCAT,
                  loss_type=loss.custom_loss,
                  is_socket=False,
                  is_early_stop=True):
@@ -61,7 +61,6 @@ class Autoencoder:
             os.mkdir(self.log_dir)
         if not os.path.exists(self.model_dir):
             os.mkdir(self.model_dir)
-        # self.image_num = len(os.listdir(self.image_dir))
         image_list = bz_path.get_file_path(self.image_dir, ".jpg")
         self.image_num = len(image_list)
         self.step_num = int(self.image_num  / self.batch_size)
@@ -80,7 +79,7 @@ class Autoencoder:
             self.loss_op = self.loss(self.inputs, self.logits)
 
         with tf.name_scope('train_op'):
-            self.train_op = tf.train.AdamOptimizer(learning_rate=0.001).minimize(self.loss_op)
+            self.train_op = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(self.loss_op)
 
         with tf.name_scope('Saver'):
             self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=5)
@@ -167,7 +166,7 @@ class Autoencoder:
                 loss_not_decrease_epoch_num += 1
             else:
                 loss_not_decrease_epoch_num = 0
-            if loss_not_decrease_epoch_num > 8:
+            if loss_not_decrease_epoch_num > 10:
                 print("导出pb模型")
                 self.export_model(self.sess)
                 print("early stopping 共训练%d个epoch" % epoch_index)

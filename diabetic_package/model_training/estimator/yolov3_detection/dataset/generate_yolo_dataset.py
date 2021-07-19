@@ -1,7 +1,6 @@
 import numpy as np
 
 from diabetic_package.model_training.estimator.yolov3_detection.utils import config
-from diabetic_package.log.log import bz_log
 
 class GenerateYoloLabel():
     def __init__(self):

@@ -24,8 +24,7 @@ class BaseClassifyEstimator(tf.estimator.Estimator):
                  optimizer_fn=tf.train.AdamOptimizer,
                  learning_rate=1e-3,
                  tensors_to_log={'probabilities': 'softmax:0'},
-                 assessment_list=
-                 ['accuracy', 'iou', 'recall', 'precision', 'auc']
+                 assessment_list=['accuracy', 'iou', 'recall', 'precision', 'auc']
                  ):
         """
 

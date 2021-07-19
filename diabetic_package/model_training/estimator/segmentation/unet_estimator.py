@@ -223,7 +223,7 @@ class UnetEstimator(base_segmentation_estimator.BaseSegmentationEstimator):
         self.layer_info_dict[result.name] = result.get_shape().as_list()
         self.__write_tensors_list(is_print=False)
         if self.transfer_checkpoint_path and not super().latest_checkpoint():
-            exclude = ['global_step','conv2d_15']
+            exclude = ['global_step','conv2d_15','conv2d_14']
             variables_to_restore = tf.contrib.framework. \
                 get_variables_to_restore(exclude=exclude)
             tf.train.init_from_checkpoint(
@@ -328,6 +328,7 @@ class UnetEstimator(base_segmentation_estimator.BaseSegmentationEstimator):
         :param regularizer: 正则化方式
         :return:
         """
+
         h_deconv = tf.layers.conv2d_transpose(
             inputs,
             filters=deconv_filter_num,
@@ -335,6 +336,33 @@ class UnetEstimator(base_segmentation_estimator.BaseSegmentationEstimator):
             strides=stride,
             padding=deconv_padding,
             kernel_regularizer=regularizer)
+
+        #修改成nn conv2d_transpose,opencv依旧不支持,依旧报反卷积的错误
+        # inputs_shape = tf.shape(inputs)
+        # h_deconv = tf.nn.conv2d_transpose(
+        #     inputs,
+        #     filter=tf.constant(1.0, shape=[filter_size, filter_size,deconv_filter_num,inputs.shape.as_list()[-1]]),
+        #     output_shape=(inputs_shape[0],inputs_shape[1]*2,inputs_shape[2]*2,deconv_filter_num),
+        #     strides=[1,stride,stride,1],
+        #     padding="SAME")
+
+        # #修改成resieze试试呢?
+        # inputs_shape = tf.shape(inputs)
+        # inputs = tf.image.resize_nearest_neighbor(
+        #     inputs,
+        #     (inputs_shape[1] * 2, inputs_shape[2] * 2)
+        # )
+        #
+        # h_deconv = tf.layers.conv2d(
+        #     inputs,
+        #     filters=deconv_filter_num,
+        #     kernel_size=(filter_size, filter_size),
+        #     strides=stride,
+        #     padding=deconv_padding,
+        #     activation=None,
+        #     use_bias=True,
+        #     kernel_regularizer=regularizer)
+
         return activate_fn(h_deconv)
 
     def __write_tensors_list(self, is_print):

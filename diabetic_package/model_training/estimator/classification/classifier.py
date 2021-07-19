@@ -66,7 +66,6 @@ class Classifier:
                  class_num,
                  model_dir='./',
                  height_width=(227, 227),
-                 crop_height_width=(227, 227),
                  k_fold=1,
                  channels_list=[3],
                  file_extension_list=['bmp'],
@@ -82,7 +81,6 @@ class Classifier:
         :param model_dir: checkpoint保存目录
         :param estimator_obj: estimator对象
         :param height_width: 输入dataset后resize图像目标高宽
-        :param crop_height_width: crop图像目标高宽
         :param k_fold: 交叉验证折数，正整数，值为1时不做交叉验证
         :param channels_list: list形式，分类任务传一个元素，为图像通道数
         :param file_extension_list: list形式，分类任务传一个元素，为图像格式
@@ -96,7 +94,6 @@ class Classifier:
         self.best_model_info_path = os.path.join(self.best_checkpoint_dir, 'best_model_info.json')
         self.estimator_obj = estimator_obj
         self.height_width = height_width
-        self.crop_height_width = crop_height_width
         self.k_fold = k_fold
         self.channels_list = channels_list
         self.file_extension_list = file_extension_list
@@ -211,7 +208,7 @@ class Classifier:
                         loss_not_decrease_epoch_num += 1
                     else:
                         loss_not_decrease_epoch_num = 0
-                    if loss_not_decrease_epoch_num > 5:
+                    if loss_not_decrease_epoch_num > 8:
                         print("early stopping 共训练%d个epoch" % epoch_index)
                         break
         if self.is_socket:
@@ -257,8 +254,8 @@ class Classifier:
                 self.export_model_dir + \
                 '/frozen_model/model_config.txt', 'w+') as f:
             f.write('model_name:frozen_model.pb' + '\n')
-            f.write('input_height:' + str(self.crop_height_width[0]) + '\n')
-            f.write('input_width:' + str(self.crop_height_width[1]) + '\n')
+            f.write('input_height:' + str(self.height_width[0]) + '\n')
+            f.write('input_width:' + str(self.height_width[1]) + '\n')
             f.write('input_channel:' + str(self.channels_list[0]) + '\n')
             f.write('batch_size:' + str(self.batch_size) + '\n')
             f.write('class_num:' + str(self.class_num))
@@ -326,7 +323,6 @@ class Classifier:
             channels_list=self.channels_list,
             file_extension_list=self.file_extension_list,
             height_width=self.height_width,
-            crop_height_width=self.crop_height_width,
             batch_size=self.batch_size,
             num_epochs=self.eval_epoch_step,
             shuffle=True)
@@ -339,7 +335,6 @@ class Classifier:
             channels_list=self.channels_list,
             file_extension_list=self.file_extension_list,
             height_width=self.height_width,
-            crop_height_width=self.crop_height_width,
             batch_size=self.batch_size,
             num_epochs=1,
             mode='evaluate')
@@ -352,6 +347,5 @@ class Classifier:
             channels_list=self.channels_list,
             file_extension_list=self.file_extension_list,
             height_width=self.height_width,
-            crop_height_width=self.crop_height_width,
             mode='predict')
         return predict_dataset.create_dataset()

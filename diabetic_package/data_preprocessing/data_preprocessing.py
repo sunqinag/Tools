@@ -11,15 +11,14 @@
 import os
 import shutil
 import numpy as np
-import functools
 import cv2
 
 from diabetic_package.file_operator import bz_path
 from diabetic_package.file_operator.balance_data import BalanceData
 from diabetic_package.image_processing_operator.python_data_augmentation.python_data_augmentation import DataAugmentation
-from diabetic_package.image_processing_operator.python_image_processing \
-    import imread,imwrite
+from diabetic_package.image_processing_operator.python_image_processing import imread,imwrite
 from diabetic_package.log.log import bz_log
+
 def copy_and_split_train_val_data(original_data_path, out_path, min_example_num=20, ext_list=(['jpg'], ['npy']), task='classification'):
     if not os.path.exists(out_path):
         os.makedirs(out_path)
@@ -189,11 +188,6 @@ def get_preprocessing_img_and_label_path_list(
                                   max_augment_num=max_augment_num, task=task, out_file_extension_list=out_file_extension_list)
         img_list, label_list,is_repeat_data_flag = balance_obj.create_data()
 
-        # img_list, label_list = balance_data(
-        #     base_folder=base_folder,
-        #     generate_data_folder=generate_data_folder_new,
-        #     max_augment_num=max_augment_num,task=task)
-
         return img_list, label_list
     else:
         img_list, label_list = bz_path.get_all_subfolder_img_label_path_list(
@@ -277,44 +271,6 @@ def split_train_eval_test_data(img_list, label_list=None, train_folder='split_tr
             __img_copy(split_label_list[i], out_path[i][1])
 
 
-# def load_detection_txt_label(detection_txt_label_path):
-#     if not os.path.exists(detection_txt_label_path):
-#         bz_log.error("路径(" + detection_txt_label_path + ")对应txt文件不存在!")
-#         bz_log.error("传入的txt文件路径：", detection_txt_label_path)
-#         raise ValueError("路径(" + detection_txt_label_path + ")对应txt文件不存在!")
-#     _, ext = bz_path.get_file_name(detection_txt_label_path, True)
-#     if ext != 'txt':
-#         bz_log.error("路径(" + detection_txt_label_path + ")不是txt文件!")
-#         bz_log.error("错误的txt文件路径：",detection_txt_label_path)
-#         raise ValueError("路径(" + detection_txt_label_path + ")不是txt文件!")
-#
-#     label = []
-#     file = open(detection_txt_label_path, 'r+')
-#     for line in file.readlines():
-#         line = line[:-1].split('_')
-#         line = list(map(lambda x: float(x), line))
-#         label.append(line)
-#     label = np.array(label)
-#     return label
-#
-#
-# def save_detection_txt_label(detection_txt_label_path, label):
-#     _, ext = bz_path.get_file_name(detection_txt_label_path, True)
-#     if ext != 'txt':
-#         bz_log.error("路径(" + detection_txt_label_path + ")不是txt文件!")
-#         bz_log.error("错误的txt文件路径：", detection_txt_label_path)
-#         raise ValueError("路径(" + detection_txt_label_path + ")不是txt文件!")
-#
-#     if os.path.exists(detection_txt_label_path):
-#         os.remove(detection_txt_label_path)
-#
-#     with open(detection_txt_label_path, 'w+') as f:
-#         for one_label in label:
-#             one_label_str = functools.reduce(lambda x, y: x + y, [str(i) + '_' for i in one_label])
-#             f.write(one_label_str[:-1] + '\n')
-#
-
-
 def __check_param(img_list, label_list, ratio, task):
     # img_list,label_list的参数检查
     if not isinstance(img_list, list) and not isinstance(img_list, np.ndarray):
@@ -378,7 +334,6 @@ def __check_param(img_list, label_list, ratio, task):
 
     return img_list, label_list, ratio, task
 
-
 def __mkdirs(train_folder, eval_folder, test_folder):
     # 创建3对[img,label]，到对应的输出路径
     type_key = ['img', 'label']
@@ -409,3 +364,24 @@ def __npy_copy(src_img_path_list,dst_path):
         label=label.replace(ext,'npy')
 
         shutil.copy(label,dst_path)
+
+
+def balance_train_val_data(data_path,out_path,max_augment_num,out_file_extension_list,task):
+    '''by enfu'''
+
+    #balance train data...
+    train_balance_obj = BalanceData(base_folder=data_path+'/train/',
+                              generate_data_folder=out_path+'/train_balance/',
+                              max_augment_num=max_augment_num, task=task,
+                              out_file_extension_list=out_file_extension_list)
+    train_img_list, train_label_list= train_balance_obj.create_data()
+
+    # balance val data...
+    val_balance_obj = BalanceData(base_folder=data_path+'/val/',
+                              generate_data_folder=out_path+'/val_balance/',
+                              max_augment_num=None, task=task,
+                              out_file_extension_list=out_file_extension_list)
+
+    val_img_list, val_label_list = val_balance_obj.create_data()
+
+    return (train_img_list, train_label_list, val_img_list, val_label_list)

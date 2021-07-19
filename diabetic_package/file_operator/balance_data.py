@@ -41,37 +41,22 @@ class BalanceData:
         self.__check_params()
 
     def create_data(self):
-        # crx判断是否进行数据增强还是重用上次增强后的数据
         self.__check_info_txt()
         img_list, label_list, augmentation_ratios, generate_data_folders = self.__get_augment_params()
+        bz_log.info('生成均衡数据')
+        img_list, label_list= self.__augment_data(img_list=img_list, label_list=label_list,
+            augmentation_ratios=augmentation_ratios,
+            channel=self.channel,
+            generate_data_folders=generate_data_folders)
 
-        if self.is_repeat_data == False:
-            bz_log.info('生成均衡数据')
-            img_list, label_list = self.__augment_data(img_list=img_list, label_list=label_list,
-                augmentation_ratios=augmentation_ratios,
-                channel=self.channel,
-                generate_data_folders=generate_data_folders)
-        else:
-            # crx保留
-            bz_log.info('进入数据重用')
-            img_list_npy_path = self.generate_data_folder + os.sep + 'img_list.npy'
-            label_list_npy_path = self.generate_data_folder + os.sep + 'label_list.npy'
-            img_list, label_list = np.load(img_list_npy_path), np.load(label_list_npy_path)
-
-            shuffle_indices = np.arange(len(img_list))
-            np.random.shuffle(shuffle_indices)
-
-            img_list = img_list[shuffle_indices]
-            label_list = label_list[shuffle_indices]
-
-        return img_list.T.flatten(), label_list.T.flatten(),self.is_repeat_data
+        return img_list.flatten(), label_list.flatten()
 
     def __get_augment_params(self):
         self.img_nums = []
         self.img_list = []
         self.label_list = []
         for folder in self.sub_folders:
-            imgs, labels = bz_path.get_img_label_path_list(self.base_folder + os.sep + folder + os.sep + 'img',
+            imgs, labels = bz_path.get_train_val_img_label_path_list(self.base_folder + os.sep + folder + os.sep + 'img',
                                                            self.base_folder + os.sep + folder + os.sep + 'label',
                                                            ret_full_path=True)
             single_class_img_num = len(imgs)
@@ -190,8 +175,7 @@ class BalanceData:
         np.save(label_list_npy_path, generate_label_list)
         self.all_img_nums = generate_img_list.size
         self.__write_result_info()
-        return generate_img_list.reshape(-1, self.max_augment_num), generate_label_list.reshape(-1,
-                                                                                                self.max_augment_num)
+        return generate_img_list, generate_label_list
 
     def __write_result_info(self, ):
         bz_log.info("记录当前训练的数据信息")

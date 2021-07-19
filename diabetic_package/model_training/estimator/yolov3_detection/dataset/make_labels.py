@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 import os
 import cv2
-import shutil
 
 from diabetic_package.model_training.estimator.yolov3_detection.dataset import (
     generate_yolo_dataset,tfexample_converter)
@@ -35,6 +34,14 @@ def get_record_list(folder):
                 # 添加路径
                 img_list.append(cur_img_file)
                 label_list.append(cur_label_file)
+
+    #进行shuffle
+    img_list,label_list=np.array(img_list),np.array(label_list)
+    shuffle_indices = np.arange(len(img_list))
+    np.random.shuffle(shuffle_indices)
+    img_list = img_list[shuffle_indices]
+    label_list = label_list[shuffle_indices]
+
     return img_list, label_list
 
 def pack_func(img_list,label_list,generate_label_func,class_num,saved_folder,flag,file_in_one_tfrecord=50):

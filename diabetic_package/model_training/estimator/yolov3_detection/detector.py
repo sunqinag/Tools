@@ -47,10 +47,7 @@ class detector():
         if self.is_socket:
             self.build_socket_connect()
 
-    #modified 0512
-    # def fit(self,train_img_list,train_label_list,eval_img_list,eval_label_list):
     def fit(self,train_records,eval_records):
-        # recall_value, loss_value = 0, 1000
         # 模型保存条件与步数控制
         if os.path.exists(self.model_dir + os.sep + 'best_checkpoint_dir/eval_metrics.json'):
             with open(self.model_dir + os.sep + 'best_checkpoint_dir/eval_metrics.json') as f:
@@ -61,7 +58,6 @@ class detector():
         loss_not_decrease_epoch_num = 0
         for epoch_index in range(0, self.epoch_num, self.eval_epoch_step):
             self.estimator_obj.train(input_fn=lambda:self.train_input_fn(train_records))
-            # if epoch_index % self.eval_epoch_step ==0:
             eval_result= self.estimator_obj.evaluate(input_fn=lambda:self.eval_input_fn(eval_records))
             print('第',epoch_index,'个epoch的验证结果:')
             for k,v in eval_result.items():
@@ -77,16 +73,13 @@ class detector():
                 self.socket.send(data_dict)
 
             # 模型更新与保存,两个判断条件并存
-            # eval_recall_value, eval_loss_value = self.__get_saved_model_value(eval_result)
             eval_loss_value = self.__get_saved_model_value(eval_result)
-            # if eval_recall_value>=recall_value or eval_loss_value <= loss_value:
             if eval_loss_value <= loss_value:
                 #导出模型
                 self.export_model()
                 with open(self.best_checkpoint_dir + '/eval_metrics.json', 'w') as f:
                     eval_result_dict = {k: str(v) for k, v in eval_result.items()}
                     json.dump(eval_result_dict, f, indent=1)
-                # recall_value,loss_value=eval_recall_value,eval_loss_value
                 loss_value=eval_loss_value
 
             # early stopping
@@ -103,10 +96,6 @@ class detector():
         #保存freeze pb模型,在训练终止时进行转换
         self.convert_export_model_to_pb()
 
-    #0512 modified
-    # def train_input_fn(self,features, labels):
-        # dataset=tf.data.Dataset.from_tensor_slices((features, labels))
-        # dataset=dataset.map(self.parse_one,num_parallel_calls=4).shuffle(int(3e2)).repeat(self.eval_epoch_step).batch(self.batch_size)
     def train_input_fn(self, train_records):
         dataset = tf.data.TFRecordDataset(train_records)
         dataset = dataset.map(self.parse_one, num_parallel_calls=10).\
@@ -114,11 +103,6 @@ class detector():
             batch(self.batch_size, drop_remainder=True).prefetch(self.batch_size)
         return dataset
 
-    #0512 modified
-    # def eval_input_fn(self,features, labels):
-    #     dataset = tf.data.Dataset.from_tensor_slices((features, labels))
-    #     dataset = dataset.map(self.parse_one,num_parallel_calls=4).shuffle(int(3e2)).repeat(1).batch(self.batch_size)
-    #     return dataset
     def eval_input_fn(self,eval_records):
         dataset = tf.data.TFRecordDataset(eval_records)
         dataset = dataset.map(self.parse_one,num_parallel_calls=10).\
@@ -126,31 +110,6 @@ class detector():
             batch(self.batch_size, drop_remainder=True).prefetch(self.batch_size)
         return dataset
 
-    #0512 modified
-    # def parse_one(self,filename,label):
-    #     '''读取并处理每张图片和对应的label'''
-    #     image_string=tf.read_file(filename)
-    #     image_decoded=tf.image.decode_image(image_string)
-    #     image_decoded=tf.reshape(image_decoded, [config.img_shape[0],config.img_shape[1],config.img_shape[2]])
-    #     image_decoded=tf.cast(image_decoded,dtype=tf.float32)
-    #
-    #     #读取label的numpy文件
-    #     label_sbbox, label_mbbox, label_lbbox, sbboxes, mbboxes, lbboxes=tf.py_func(self.read_numpy_file,[label],[tf.float32]*6)
-    #
-    #     label_sbbox,label_mbbox,label_lbbox = tf.reshape(label_sbbox, [config.grids[0],config.grids[0],config.prior_num_per_cell,5+self.class_num]),\
-    #                                           tf.reshape(label_mbbox, [config.grids[1],config.grids[1],config.prior_num_per_cell,5+self.class_num]),\
-    #                                           tf.reshape(label_lbbox, [config.grids[2],config.grids[2],config.prior_num_per_cell,5+self.class_num])
-    #
-    #     sbboxes, mbboxes, lbboxes = tf.reshape(sbboxes, [config.max_bbox_per_scale,4]),\
-    #                                 tf.reshape(mbboxes, [config.max_bbox_per_scale,4]),\
-    #                                 tf.reshape(lbboxes, [config.max_bbox_per_scale,4])
-    #
-    #     return {'img':image_decoded},{'label_sbbox':label_sbbox,
-    #                                   'label_mbbox':label_mbbox,
-    #                                   'label_lbbox':label_lbbox,
-    #                                   'sbboxes':sbboxes,
-    #                                   'mbboxes':mbboxes,
-    #                                   'lbboxes':lbboxes}
     def parse_one(self,example_proto):
         '''读取并处理每张图片和对应的label'''
         image_decoded, label_sbbox, label_mbbox, label_lbbox, \
@@ -180,7 +139,6 @@ class detector():
         for k,v in eval_result.items():
             if 'recall' in k:eval_recall_value += v
         eval_loss_value=eval_result['loss'] #验证loss越来越低的话，保存模型
-        # return eval_recall_value,eval_loss_value
         return eval_loss_value
 
     def export_model(self):
@@ -214,7 +172,6 @@ class detector():
         if os.path.exists(export_model_dir):
             shutil.rmtree(export_model_dir)
         os.mkdir(export_model_dir)
-
 
         self.estimator_obj.export_savedmodel(
             export_model_dir,
@@ -267,5 +224,4 @@ class detector():
             print("尝试连接9990")
         except socket.error as e:
             raise ValueError('service connection failed: %s \r\n' % e)
-        # 接收欢迎消息:
         print("建立连接")

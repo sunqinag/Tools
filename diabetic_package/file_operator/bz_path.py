@@ -10,6 +10,7 @@
 #   完成日期 : 2019-12-06
 # -------------------------------------------------------------------
 import os
+import random
 import numpy as np
 import platform
 from diabetic_package.log.log import bz_log
@@ -93,8 +94,7 @@ def get_subfolder_path(folder, ret_full_path=True, is_recursion=True):
             result = [folder + folder_dir for folder_dir in result]
     return result
 
-
-def get_img_label_path_list(img_path, label_path, ret_full_path=False, ext_list=([], [])):
+def get_img_label_path_list(img_path, label_path, ret_full_path=True, ext_list=([], [])):
     """
     获取经过排序后img和label的path_list
     :param img_path:图像路径
@@ -107,12 +107,54 @@ def get_img_label_path_list(img_path, label_path, ret_full_path=False, ext_list=
     label_file_path_list = np.sort(get_file_path(label_path, ret_full_path=ret_full_path, exts=ext_list[1]))
 
 
+    if len(img_file_path_list) == 0 or len(label_file_path_list) == 0:
+        bz_log.error('img_path或者label_path为空!%d%d', len(img_file_path_list),
+                     len(label_file_path_list))
+        raise ValueError('img_path或者label_path为空!')
 
+    if len(img_file_path_list) != len(label_file_path_list):
+        bz_log.error('img_path和label_path中文件个数不相等!%d%d', len(img_file_path_list), len(label_file_path_list))
+        raise ValueError('img_path和label_path中文件个数不相等!')
+
+    img_file_name_list = np.array(list(map(get_file_name, img_file_path_list)))
+    label_file_name_list = np.array(list(map(get_file_name, label_file_path_list)))
+    img_not_equal_file_list = img_file_path_list[img_file_name_list != label_file_name_list]
+    label_not_equal_file_list = label_file_path_list[img_file_name_list != label_file_name_list]
+
+    if len(img_not_equal_file_list) != 0:
+        raise ValueError(img_not_equal_file_list, '和', label_not_equal_file_list, '文件名不一致!')
+
+    return img_file_path_list, label_file_path_list
+
+def get_train_val_img_label_path_list(img_path, label_path, ret_full_path=True, ext_list=([], [])):
+
+    """
+    获取经过排序后img和label的path_list,针对数据增强时val出现极限情况当图像数目比较少时val
+    某个类别数据为0时,从train对应类别随机获取一张图像数据作为验证集
+    :param img_path:图像路径
+    :param label_path: label路径
+    :param ret_full_path: 是否返回全路径
+    :param ext_list:img 和label的文件扩展名,需要是一个包含两个list的tuple或者list,
+                    其中的第一个list与img对应,第二个list与label对应
+    :return:获取经过排序后img和label的path_list
+    """
+    img_file_path_list = np.sort(get_file_path(img_path, ret_full_path=ret_full_path, exts=ext_list[0]))
+    label_file_path_list = np.sort(get_file_path(label_path, ret_full_path=ret_full_path, exts=ext_list[1]))
 
 
     if len(img_file_path_list) == 0 or len(label_file_path_list) == 0:
-        bz_log.error('img_path或者label_path为空!%d%d', len(img_file_path_list), len(label_file_path_list))
-        raise ValueError('img_path或者label_path为空!')
+        if img_path.split("//")[0].split("/")[-1] == "train":
+            bz_log.error('img_path或者label_path为空!%d%d', len(img_file_path_list),
+                         len(label_file_path_list))
+            raise ValueError('img_path或者label_path为空!')
+        else:
+            img_file_path_list=[]
+            label_file_path_list=[]
+            train_img_list = np.sort(get_file_path(img_path.replace("val", "train"), ret_full_path=True))
+            train_label_list = np.sort(get_file_path(label_path.replace("val", "train"), ret_full_path=True))
+            index_num = random.randint(1, len(train_img_list))
+            img_file_path_list = np.append(img_file_path_list,train_img_list[index_num])
+            label_file_path_list = np.append(label_file_path_list, train_label_list[index_num])
 
     if len(img_file_path_list) != len(label_file_path_list):
         bz_log.error('img_path和label_path中文件个数不相等!%d%d', len(img_file_path_list), len(label_file_path_list))
@@ -175,6 +217,38 @@ def get_all_subfolder_img_label_path_list(folder, ret_full_path=True):
             ret_full_path=ret_full_path)
         img_list = np.append(img_list, sub_img_list)
         label_list = np.append(label_list, sub_label_list)
+    return img_list, label_list
+
+def get_all_aug_subfolder_img_label_path_list(folder, ret_full_path=True):
+    '''
+    :creater:enfu
+    获取folder文件夹下所有增强文件夹内的img和label path_list,如train文件夹下有1,2,3,4等各个类别文件夹，
+    每个文件夹下是augmentation_img和augmentation_label文件夹，必须是augmentation_img和augmentation_label的命名。
+    :param folder: 父文件夹
+    :param ret_full_path:是否返回全路径
+    :return:
+    '''
+    img_list = np.array([])
+    label_list = np.array([])
+    default_separation_line = '/'
+    if (platform.system() == 'Windows'):
+        default_separation_line = '\\'
+        if folder[-1] != '\\':
+            folder = folder + '\\'
+    elif (platform.system() == 'Linux'):
+        if folder[-1] != '/':
+            folder = folder + '/'
+    else:
+        bz_log.error('目前只支持Windows 系统和Linux系统！')
+        raise ValueError('目前只支持Windows 系统和Linux系统！')
+    for subfolder in get_subfolder_path(folder, ret_full_path=True, is_recursion=False):
+        if os.path.isdir(subfolder):
+            sub_img_list, sub_label_list = get_img_label_path_list(
+                img_path=subfolder + default_separation_line + 'augmentation_img',
+                label_path=subfolder + default_separation_line + 'augmentation_label',
+                ret_full_path=ret_full_path)
+            img_list = np.append(img_list, sub_img_list)
+            label_list = np.append(label_list, sub_label_list)
     return img_list, label_list
 
 # if __name__ == '__main__':
